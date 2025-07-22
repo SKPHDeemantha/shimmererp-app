@@ -24,22 +24,24 @@ export async function POST(request: Request) {
 
     const {
       In_No,
-      Customer_Id,
-      Customer_Name,
+      Supplier_ID,
+      Supplier_Name,
       Date,
       Item_Code,
       Item_Name,
       Pack_Size,
+      Total_Amount,
     } = body;
 
     if (
       !In_No ||
-      !Customer_Id ||
-      !Customer_Name ||
+      !Supplier_ID ||
+      !Supplier_Name ||
       !Date ||
       !Item_Code ||
       !Item_Name ||
-      !Pack_Size
+      !Pack_Size ||
+      !Total_Amount
     ) {
       return NextResponse.json(
         { error: "All fields are required" },
@@ -48,9 +50,9 @@ export async function POST(request: Request) {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO invoice_data (In_No, Customer_Id, Customer_Name, Date, Item_Code, Item_Name, Pack_Size)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [In_No, Customer_Id, Customer_Name, Date, Item_Code, Item_Name, Pack_Size]
+      `INSERT INTO invoice_data (In_No, Supplier_ID, Supplier_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [In_No, Supplier_ID, Supplier_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount]
     );
 
     return NextResponse.json({ id: In_No, ...body }, { status: 201 });
@@ -88,15 +90,16 @@ export async function PUT(request: Request) {
 
     await pool.execute(
       `UPDATE invoice_data SET
-                Customer_Id = ?, Customer_Name = ?, Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?
-             WHERE In_No = ?`,
+        Supplier_ID = ?, Supplier_Name = ?, Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?, Total_Amount = ?
+        WHERE In_No = ?`,
       [
-        body.Customer_Id || existingInvoice.Customer_Id,
-        body.Customer_Name || existingInvoice.Customer_Name,
+        body.Supplier_ID || existingInvoice.Supplier_ID,
+        body.Supplier_Name || existingInvoice.Supplier_Name,
         body.Date || existingInvoice.Date,
         body.Item_Code || existingInvoice.Item_Code,
         body.Item_Name || existingInvoice.Item_Name,
         body.Pack_Size || existingInvoice.Pack_Size,
+        body.Total_Amount || existingInvoice.Total_Amount,
         body.In_No,
       ]
     );
