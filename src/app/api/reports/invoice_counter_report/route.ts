@@ -1,22 +1,36 @@
 import { NextResponse } from "next/server";
 import { getDBConnection } from "../../../../../lib/db";
 
-// GET Invoice Count by Type (customer/supplier)
+// GET All Invoices and Separate Counts by Type
 export async function GET() {
   try {
     const pool = await getDBConnection();
 
-    const [rows] = await pool.query(`
-      SELECT Type, COUNT(Type) AS InvoiceCount
-      FROM (
-        SELECT 'customer' AS InvoiceType, * FROM customer_invoice_report
-        UNION ALL
-        SELECT 'supplier' AS InvoiceType, * FROM supplier_invoice_report
-      ) AS combined_invoices
-      GROUP BY Type;
+    // Fetch combined invoices
+    const [combinedRows] = await pool.query(`
+      SELECT In_No, Customer_Id AS Party_Id, Customer_Name AS Party_Name, Date, 
+             Item_Code, Item_Name, Pack_Size, Total_Amount, 'customer' AS Type 
+      FROM customer_invoice_report
+      UNION ALL
+      SELECT In_No, Supplier_ID AS Party_Id, Supplier_Name AS Party_Name, Date, 
+             Item_Code, Item_Name, Pack_Size, Total_Amount, 'supplier' AS Type 
+      FROM supplier_invoice_report
     `);
 
-    return NextResponse.json(rows, { status: 200 });
+    // Fetch separate counts
+    const [counts] = await pool.query(`
+      SELECT 'customer' AS Type, COUNT(*) AS InvoiceCount FROM customer_invoice_report
+      UNION ALL
+      SELECT 'supplier' AS Type, COUNT(*) AS InvoiceCount FROM supplier_invoice_report
+    `);
+
+    return NextResponse.json(
+      {
+        invoiceData: combinedRows,
+        invoiceCounts: counts,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error generating invoice count report:", error);
     return NextResponse.json(
