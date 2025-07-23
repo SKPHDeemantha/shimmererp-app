@@ -1,48 +1,36 @@
 import { NextResponse } from "next/server";
 import { getDBConnection } from "../../../../../lib/db";
 
-// GET all low stock notifications
+// GET all notifications
 export async function GET() {
   try {
     const pool = await getDBConnection();
-    const [rows] = await pool.query("SELECT * FROM low_stock_notification_data");
+    const [rows] = await pool.query("SELECT * FROM certification_expiry_notification");
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {
     console.error("GET error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch low stock notifications" },
+      { error: "Failed to fetch certification expiry notifications" },
       { status: 500 }
     );
   }
 }
 
-// POST a new low stock notification
+// POST a new notification
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const pool = await getDBConnection();
 
     const {
-      Notification_Id,
-      Item_Code,
-      Item_Name,
-      Current_Qty,
-      Reorder_level,
+      Notification_ID,
+      Reg_Id,
+      Certification_Name,
+      Expiry_Date,
       Notification_Status,
-      Notification_Date,
-      Email,
     } = body;
 
-    if (
-      !Notification_Id ||
-      !Item_Code ||
-      !Item_Name ||
-      !Current_Qty ||
-      !Reorder_level ||
-      !Notification_Status ||
-      !Notification_Date ||
-      !Email
-    ) {
+    if (!Notification_ID || !Reg_Id || !Certification_Name || !Expiry_Date || !Notification_Status) {
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
@@ -50,50 +38,41 @@ export async function POST(request: Request) {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO low_stock_notification_data
-      (Notification_Id, Item_Code, Item_Name, Current_Qty, Reorder_level, Notification_Status, Notification_Date, Email)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        Notification_Id,
-        Item_Code,
-        Item_Name,
-        Current_Qty,
-        Reorder_level,
-        Notification_Status,
-        Notification_Date,
-        Email,
-      ]
+      `INSERT INTO certification_expiry_notification 
+        (Notification_ID, Reg_Id, Certification_Name, Expiry_Date, Notification_Status)
+       VALUES (?, ?, ?, ?, ?)`,
+      [Notification_ID, Reg_Id, Certification_Name, Expiry_Date, Notification_Status]
     );
 
-    return NextResponse.json({ id: Notification_Id, ...body }, { status: 201 });
+    return NextResponse.json({ id: Notification_ID, ...body }, { status: 201 });
   } catch (error) {
     console.error("POST error:", error);
     return NextResponse.json(
-      { error: "Failed to create low stock notification" },
+      { error: "Failed to create certification expiry notification" },
       { status: 500 }
     );
   }
 }
 
-// PUT update low stock notification
+// PUT update notification
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
     const pool = await getDBConnection();
 
-    if (!body.Notification_Id) {
+    if (!body.Notification_ID) {
       return NextResponse.json(
-        { error: "Notification_Id is required" },
+        { error: "Notification_ID is required for update" },
         { status: 400 }
       );
     }
 
     const [existing] = await pool.query(
-      "SELECT * FROM low_stock_notification_data WHERE Notification_Id = ?",
-      [body.Notification_Id]
+      "SELECT * FROM certification_expiry_notification WHERE Notification_ID = ?",
+      [body.Notification_ID]
     );
-
     const current = (existing as any[])[0];
+
     if (!current) {
       return NextResponse.json(
         { error: "Notification not found" },
@@ -102,51 +81,45 @@ export async function PUT(request: Request) {
     }
 
     await pool.execute(
-      `UPDATE low_stock_notification_data SET
-        Item_Code = ?,
-        Item_Name = ?,
-        Current_Qty = ?,
-        Reorder_level = ?,
-        Notification_Status = ?,
-        Notification_Date = ?,
-        Email = ?
-       WHERE Notification_Id = ?`,
+      `UPDATE certification_expiry_notification SET 
+        Reg_Id = ?, 
+        Certification_Name = ?, 
+        Expiry_Date = ?, 
+        Notification_Status = ?
+       WHERE Notification_ID = ?`,
       [
-        body.Item_Code || current.Item_Code,
-        body.Item_Name || current.Item_Name,
-        body.Current_Qty || current.Current_Qty,
-        body.Reorder_level || current.Reorder_level,
+        body.Reg_Id || current.Reg_Id,
+        body.Certification_Name || current.Certification_Name,
+        body.Expiry_Date || current.Expiry_Date,
         body.Notification_Status || current.Notification_Status,
-        body.Notification_Date || current.Notification_Date,
-        body.Email || current.Email,
-        body.Notification_Id,
+        body.Notification_ID,
       ]
     );
 
     const [updated] = await pool.query(
-      "SELECT * FROM low_stock_notification_data WHERE Notification_Id = ?",
-      [body.Notification_Id]
+      "SELECT * FROM certification_expiry_notification WHERE Notification_ID = ?",
+      [body.Notification_ID]
     );
 
     return NextResponse.json((updated as any[])[0], { status: 200 });
   } catch (error) {
     console.error("PUT error:", error);
     return NextResponse.json(
-      { error: "Failed to update notification" },
+      { error: "Failed to update certification expiry notification" },
       { status: 500 }
     );
   }
 }
 
-// DELETE low stock notification
+// DELETE notification
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("Notification_Id");
+    const id = searchParams.get("Notification_ID");
 
     if (!id) {
       return NextResponse.json(
-        { error: "Notification_Id is required for delete" },
+        { error: "Notification_ID is required for delete" },
         { status: 400 }
       );
     }
@@ -154,7 +127,7 @@ export async function DELETE(request: Request) {
     const pool = await getDBConnection();
 
     const [existing] = await pool.query(
-      "SELECT * FROM low_stock_notification_data WHERE Notification_Id = ?",
+      "SELECT * FROM certification_expiry_notification WHERE Notification_ID = ?",
       [id]
     );
 
@@ -166,7 +139,7 @@ export async function DELETE(request: Request) {
     }
 
     await pool.execute(
-      "DELETE FROM low_stock_notification_data WHERE Notification_Id = ?",
+      "DELETE FROM certification_expiry_notification WHERE Notification_ID = ?",
       [id]
     );
 
