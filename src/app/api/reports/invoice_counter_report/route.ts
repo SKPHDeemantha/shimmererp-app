@@ -7,13 +7,13 @@ export async function GET() {
     const pool = await getDBConnection();
 
     const [rows] = await pool.query(`
-      SELECT InvoiceType, COUNT(*) AS InvoiceCount
+      SELECT Type, COUNT(Type) AS InvoiceCount
       FROM (
         SELECT 'customer' AS InvoiceType, * FROM customer_invoice_report
         UNION ALL
         SELECT 'supplier' AS InvoiceType, * FROM supplier_invoice_report
       ) AS combined_invoices
-      GROUP BY InvoiceType;
+      GROUP BY Type;
     `);
 
     return NextResponse.json(rows, { status: 200 });
