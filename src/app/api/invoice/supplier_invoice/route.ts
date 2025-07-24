@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDBConnection } from "../../../../lib/db";
+import { getDBConnection } from "../../../../../lib/db";
 
 // GET all invoices
 export async function GET() {
