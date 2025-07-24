@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       In_No,
       Customer_ID,
       Customer_Name,
-      Date,
+      Created_Date,
       Item_Code,
       Item_Name,
       Pack_Size,
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     } = body;
 
     if (
-      !In_No || !Customer_ID || !Customer_Name || !Date || !Item_Code || !Item_Name ||
+      !In_No || !Customer_ID || !Customer_Name || !Created_Date || !Item_Code || !Item_Name ||
       !Pack_Size || !Unit_Price || !Total_Amount || !User_ID || !User_Name ||
       !Customer_Address || !User_Address || !User_Phone || !Fax || !SR_No ||
       !MF_Date || !Ex_Date || !Batch_No || !Type
@@ -59,10 +59,10 @@ export async function POST(request: Request) {
 
     const [result] = await pool.execute(
       `INSERT INTO customer_invoice_data 
-      (In_No, Customer_ID, Customer_Name, Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount, 
+      (In_No, Customer_ID, Customer_Name, Created_Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount, 
        User_ID, User_Name, Customer_Address, User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [In_No, Customer_ID, Customer_Name, Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount,
+      [In_No, Customer_ID, Customer_Name, Created_Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount,
        User_ID, User_Name, Customer_Address, User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type]
     );
 
@@ -101,14 +101,14 @@ export async function PUT(request: Request) {
 
     await pool.execute(
       `UPDATE customer_invoice_data SET
-        Customer_ID = ?, Customer_Name = ?, Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?, 
+        Customer_ID = ?, Customer_Name = ?, Created_Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?, 
         Unit_Price = ?, Total_Amount = ?, User_ID = ?, User_Name = ?, Customer_Address = ?, User_Address = ?,
         User_Phone = ?, Fax = ?, SR_No = ?, MF_Date = ?, Ex_Date = ?, Batch_No = ?, Type = ?
         WHERE In_No = ?`,
       [
         body.Customer_ID || existingInvoice.Customer_ID,
         body.Customer_Name || existingInvoice.Customer_Name,
-        body.Date || existingInvoice.Date,
+        body.Created_Date || existingInvoice.Created_Date,
         body.Item_Code || existingInvoice.Item_Code,
         body.Item_Name || existingInvoice.Item_Name,
         body.Pack_Size || existingInvoice.Pack_Size,
