@@ -14,7 +14,7 @@ export async function GET() {
         MAX(d.Date) AS Last_Delivery_Date,
         DATEDIFF(CURDATE(), MAX(d.Date)) AS Days_Since_Movement
       FROM item_master_data imd
-      LEFT JOIN delivery_data d ON imd.Item_Code = d.Item_Code
+      LEFT JOIN deliver_data d ON imd.Item_Code = d.Item_Code
       GROUP BY imd.Item_Code, imd.Item_Name, imd.Available_Stock;
     `);
 

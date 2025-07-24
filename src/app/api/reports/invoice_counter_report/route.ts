@@ -8,20 +8,20 @@ export async function GET() {
 
     // Fetch combined invoices
     const [combinedRows] = await pool.query(`
-      SELECT In_No, Customer_Id AS Party_Id, Customer_Name AS Party_Name, Date, 
+      SELECT In_No, Customer_Id AS Party_Id, Customer_Name AS Party_Name, Created_Date, 
              Item_Code, Item_Name, Pack_Size, Total_Amount, 'customer' AS Type 
-      FROM customer_invoice_report
+      FROM customer_invoice_data
       UNION ALL
       SELECT In_No, Supplier_ID AS Party_Id, Supplier_Name AS Party_Name, Date, 
              Item_Code, Item_Name, Pack_Size, Total_Amount, 'supplier' AS Type 
-      FROM supplier_invoice_report
+      FROM supplier_invoice_data
     `);
 
     // Fetch separate counts
     const [counts] = await pool.query(`
-      SELECT 'customer' AS Type, COUNT(*) AS InvoiceCount FROM customer_invoice_report
+      SELECT 'customer' AS Type, COUNT(*) AS InvoiceCount FROM customer_invoice_data
       UNION ALL
-      SELECT 'supplier' AS Type, COUNT(*) AS InvoiceCount FROM supplier_invoice_report
+      SELECT 'supplier' AS Type, COUNT(*) AS InvoiceCount FROM supplier_invoice_data
     `);
 
     return NextResponse.json(

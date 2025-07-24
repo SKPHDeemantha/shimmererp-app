@@ -5,7 +5,7 @@ import { getDBConnection } from "../../../../../lib/db";
 export async function GET() {
   try {
     const pool = await getDBConnection();
-    const [rows] = await pool.query("SELECT * FROM return_order");
+    const [rows] = await pool.query("SELECT * FROM return_customer_order_data");
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {
     console.error("Error fetching return orders:", error);
