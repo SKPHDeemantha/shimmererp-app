@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const pool = await getDBConnection();
     const [rows] = await pool.query(
-      "SELECT User_ID, Name, Email,Password, Profile_Picture FROM user_data"
+      "SELECT User_ID, Name, Email,Password, Profile_Picture,User_Address FROM user_data"
     );
     return NextResponse.json(rows);
   } catch (error) {
@@ -25,10 +25,10 @@ export async function GET() {
 // POST (Sign Up) a new user
 export async function POST(request: Request) {
   try {
-    const { User_ID, Name, Email, Password, Profile_Picture } =
+    const { User_ID, Name, Email, Password, Profile_Picture, User_Address } =
       await request.json();
 
-    if (!User_ID || !Name || !Email || !Password) {
+    if (!User_ID || !Name || !Email || !Password || !User_Address) {
       return NextResponse.json(
         { error: "User_ID, Name, Email and Password are required" },
         { status: 400 }
@@ -58,17 +58,21 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(Password, 10);
     await pool.execute(
-      "INSERT INTO user_data (User_ID, Name, Email, Password, Profile_Picture) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO user_data (User_ID, Name, Email, Password, Profile_Picture,User_Address) VALUES (?, ?, ?, ?, ?, ?)",
       [
         User_ID,
         Name,
         Email,
         hashedPassword,
         Profile_Picture || DEFAULT_PROFILE_PIC,
+        User_Address,
       ]
     );
 
-    return NextResponse.json({ User_ID, Name, Email ,Password}, { status: 201 });
+    return NextResponse.json(
+      { User_ID, Name, Email, User_Address },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Create user error:", error);
     return NextResponse.json(
@@ -81,7 +85,7 @@ export async function POST(request: Request) {
 // PUT (Update) user
 export async function PUT(request: Request) {
   try {
-    const { User_ID, Name, Email, Password, Profile_Picture } =
+    const { User_ID, Name, Email, Password, Profile_Picture, User_Address } =
       await request.json();
 
     if (!User_ID) {
@@ -107,12 +111,13 @@ export async function PUT(request: Request) {
       : user.Password;
 
     await pool.execute(
-      "UPDATE user_data SET Name = ?, Email = ?, Password = ?, Profile_Picture = ? WHERE User_ID = ?",
+      "UPDATE user_data SET Name = ?, Email = ?, Password = ?, Profile_Picture = ? User_Address =? WHERE User_ID = ?",
       [
         Name || user.Name,
         Email || user.Email,
         hashedPassword,
         Profile_Picture || user.Profile_Picture,
+        User_Address || user.User_Address,
         User_ID,
       ]
     );

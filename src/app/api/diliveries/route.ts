@@ -6,7 +6,7 @@ export async function GET() {
     const pool = await getDBConnection();
 
     const [rows] = await pool.execute(
-      "SELECT Deliver_Id, So_Id, Item_Code, Item_Name, Date, Status FROM delivery_data"
+      "SELECT Deliver_Id, So_Id, Item_Code, Item_Name, Date, Status FROM deliver_data"
     );
 
     return NextResponse.json(rows);
