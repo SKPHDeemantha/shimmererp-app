@@ -30,20 +30,26 @@ export async function POST(request: Request) {
       Item_Code,
       Item_Name,
       Pack_Size,
+      Unit_Price,
       Total_Amount,
+      User_ID,
+      User_Name,
+      Customer_Address,
+      User_Address,
+      User_Phone,
+      Fax,
+      SR_No,
+      MF_Date,
+      Ex_Date,
+      Batch_No,
       Type
     } = body;
 
     if (
-      !In_No ||
-      !Customer_ID ||
-      !Customer_Name ||
-      !Date ||
-      !Item_Code ||
-      !Item_Name ||
-      !Pack_Size ||
-      !Total_Amount ||
-      !Type
+      !In_No || !Customer_ID || !Customer_Name || !Date || !Item_Code || !Item_Name ||
+      !Pack_Size || !Unit_Price || !Total_Amount || !User_ID || !User_Name ||
+      !Customer_Address || !User_Address || !User_Phone || !Fax || !SR_No ||
+      !MF_Date || !Ex_Date || !Batch_No || !Type
     ) {
       return NextResponse.json(
         { error: "All fields are required" },
@@ -52,9 +58,12 @@ export async function POST(request: Request) {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO customer_invoice_data (In_No, Customer_ID, Customer_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount, Type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [In_No, Customer_ID, Customer_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount, Type]
+      `INSERT INTO customer_invoice_data 
+      (In_No, Customer_ID, Customer_Name, Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount, 
+       User_ID, User_Name, Customer_Address, User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [In_No, Customer_ID, Customer_Name, Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount,
+       User_ID, User_Name, Customer_Address, User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type]
     );
 
     return NextResponse.json({ id: In_No, ...body }, { status: 201 });
@@ -92,7 +101,9 @@ export async function PUT(request: Request) {
 
     await pool.execute(
       `UPDATE customer_invoice_data SET
-        Customer_ID = ?, Customer_Name = ?, Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?, Total_Amount = ?, Type = ?
+        Customer_ID = ?, Customer_Name = ?, Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?, 
+        Unit_Price = ?, Total_Amount = ?, User_ID = ?, User_Name = ?, Customer_Address = ?, User_Address = ?,
+        User_Phone = ?, Fax = ?, SR_No = ?, MF_Date = ?, Ex_Date = ?, Batch_No = ?, Type = ?
         WHERE In_No = ?`,
       [
         body.Customer_ID || existingInvoice.Customer_ID,
@@ -101,7 +112,18 @@ export async function PUT(request: Request) {
         body.Item_Code || existingInvoice.Item_Code,
         body.Item_Name || existingInvoice.Item_Name,
         body.Pack_Size || existingInvoice.Pack_Size,
+        body.Unit_Price || existingInvoice.Unit_Price,
         body.Total_Amount || existingInvoice.Total_Amount,
+        body.User_ID || existingInvoice.User_ID,
+        body.User_Name || existingInvoice.User_Name,
+        body.Customer_Address || existingInvoice.Customer_Address,
+        body.User_Address || existingInvoice.User_Address,
+        body.User_Phone || existingInvoice.User_Phone,
+        body.Fax || existingInvoice.Fax,
+        body.SR_No || existingInvoice.SR_No,
+        body.MF_Date || existingInvoice.MF_Date,
+        body.Ex_Date || existingInvoice.Ex_Date,
+        body.Batch_No || existingInvoice.Batch_No,
         body.Type || existingInvoice.Type,
         body.In_No
       ]

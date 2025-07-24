@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDBConnection } from "../../../../lib/db";
-import { error } from "console";
+
 
 // GET all items
 export async function GET() {
