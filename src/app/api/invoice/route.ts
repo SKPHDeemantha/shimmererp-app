@@ -24,6 +24,7 @@ export async function POST(request: Request) {
 
     const {
       In_No,
+      Po_Id,
       Supplier_ID,
       Supplier_Name,
       Date,
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       Item_Name,
       Pack_Size,
       Total_Amount,
-      Type
+      Type,
     } = body;
 
     if (
@@ -52,9 +53,19 @@ export async function POST(request: Request) {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO invoice_data (In_No, Supplier_ID, Supplier_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount,Type)
+      `INSERT INTO invoice_data (In_No,Po_Id, Supplier_ID, Supplier_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount,Type)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [In_No, Supplier_ID, Supplier_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount]
+      [
+        In_No,
+        Po_Id,
+        Supplier_ID,
+        Supplier_Name,
+        Date,
+        Item_Code,
+        Item_Name,
+        Pack_Size,
+        Total_Amount,
+      ]
     );
 
     return NextResponse.json({ id: In_No, ...body }, { status: 201 });
@@ -92,7 +103,7 @@ export async function PUT(request: Request) {
 
     await pool.execute(
       `UPDATE invoice_data SET
-        Supplier_ID = ?, Supplier_Name = ?, Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?, Total_Amount = ? Type =?
+        Po_Id? Supplier_ID = ?, Supplier_Name = ?, Date = ?, Item_Code = ?, Item_Name = ?, Pack_Size = ?, Total_Amount = ? Type =?
         WHERE In_No = ?`,
       [
         body.Supplier_ID || existingInvoice.Supplier_ID,
@@ -102,7 +113,7 @@ export async function PUT(request: Request) {
         body.Item_Name || existingInvoice.Item_Name,
         body.Pack_Size || existingInvoice.Pack_Size,
         body.Total_Amount || existingInvoice.Total_Amount,
-        body.Type ||existingInvoice.Type,
+        body.Type || existingInvoice.Type,
         body.In_No,
       ]
     );
