@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { getDBConnection } from "../../../../../../lib/db";
 
-// GET Customer-wise Sales Order Report
-export async function GET() {
+// GET Customer-wise Sales Order Report with optional date range filter
+export async function GET(req: Request) {
   try {
     const pool = await getDBConnection();
+    const { searchParams } = new URL(req.url);
 
-    const [rows] = await pool.query(`
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    let query = `
       SELECT 
         So_Id,
         Customer_Id,
@@ -19,7 +23,16 @@ export async function GET() {
         Discount,
         Total_Amount
       FROM sales_order_data
-    `);
+    `;
+
+    const params: any[] = [];
+
+    if (startDate && endDate) {
+      query += ` WHERE Order_Date BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+
+    const [rows] = await pool.query(query, params);
 
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {
@@ -30,3 +43,4 @@ export async function GET() {
     );
   }
 }
+

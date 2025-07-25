@@ -90,7 +90,7 @@ export async function PUT(request: Request) {
 
     await pool.execute(
       `UPDATE item_master_data 
-             SET Item_Name = ?, Brand = ?, Size = ?, Available_Stock = ?, Price = ?, Country = ?
+             SET Item_Name = ?, Brand = ?, Size = ?, Available_Stock = ?, Price = ?, Country = ? Created_Date =?
              WHERE Item_Code = ?`,
       [
         body.Item_Name || existing[0]?.Item_Name,
@@ -99,6 +99,7 @@ export async function PUT(request: Request) {
         body.Available_Stock ?? existing[0]?.Available_Stock,
         body.Price ?? existing[0]?.Price,
         body.Country || existing[0]?.Country,
+         body.Created_Date || existing[0]?.Created_Date,
         body.Item_Code,
       ]
     );
