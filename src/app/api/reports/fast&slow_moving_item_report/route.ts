@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { getDBConnection } from "../../../../../lib/db";
 
-export async function GET() {
+// GET item movement report with optional date range
+export async function GET(req :Request) {
   try {
     const pool = await getDBConnection();
 
-    const [rows] = await pool.execute(
-      `
+    const { searchParams } = new URL(req.url);
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    let query = `
+      SELECT 
         imr.Report_Id,
         imr.Item_Code,
         d.Deliver_Id,
@@ -15,15 +20,22 @@ export async function GET() {
         imr.Last_Movement_Date,
         imr.Days_Since_Movement,
         imr.Category,
-        imr.Report_Date,
-        
+        imr.Report_Date
       FROM item_movement_report imr
-     INNER JOIN deliver_data d 
+      INNER JOIN deliver_data d 
         ON imr.Item_Code = d.Item_Code
         AND imr.Last_Movement_Date = d.Date
         AND imr.Total_Movement = d.Quantity
-      `
-    );
+    `;
+
+    const params = [];
+
+    if (startDate && endDate) {
+      query += ` WHERE imr.Report_Date BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+
+    const [rows] = await pool.execute(query, params);
 
     return NextResponse.json(rows);
   } catch (error) {
@@ -32,6 +44,7 @@ export async function GET() {
   }
 }
 
+// POST: Insert new item movement report
 export async function POST(req: Request) {
   try {
     const body = await req.json();
