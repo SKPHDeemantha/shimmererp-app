@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { getDBConnection } from "../../../../../../lib/db";
 
-// GET Product-wise Sales Order Report
-export async function GET() {
+// GET Product-wise Sales Order Report with optional date range
+export async function GET(req: Request) {
   try {
     const pool = await getDBConnection();
+    const { searchParams } = new URL(req.url);
 
-    const [rows] = await pool.query(`
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    let query = `
       SELECT 
         sod.So_Id,
         imd.Item_Code,
@@ -20,8 +24,17 @@ export async function GET() {
         sod.Delivery_Date,
         sod.Payment_Status
       FROM sales_order_deta sod
-      INNER JOIN item_master_data so ON sod.Item_Code = imd.Item_Code
-    `);
+      INNER JOIN item_master_data imd ON sod.Item_Code = imd.Item_Code
+    `;
+
+    const params: any[] = [];
+
+    if (startDate && endDate) {
+      query += ` WHERE sod.Order_Date BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+
+    const [rows] = await pool.query(query, params);
 
     return NextResponse.json(rows, { status: 200 });
   } catch (error) {
@@ -32,3 +45,4 @@ export async function GET() {
     );
   }
 }
+
