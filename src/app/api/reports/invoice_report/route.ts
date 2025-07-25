@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type") || "all";
 
     let query = "";
-    let rows: any[] = [];
 
     if (type === "customer") {
       query = "SELECT * FROM customer_invoice_report";
@@ -18,15 +17,15 @@ export async function GET(request: NextRequest) {
       query = "SELECT * FROM supplier_invoice_report";
     } else {
       query = `
-        SELECT 'customer' AS InvoiceType, * FROM customer_invoice_report
+        SELECT 'customer' AS InvoiceType, ci.* FROM customer_invoice_report ci
         UNION ALL
-        SELECT 'supplier' AS InvoiceType, * FROM supplier_invoice_report
+        SELECT 'supplier' AS InvoiceType, si.* FROM supplier_invoice_report si
       `;
     }
 
-    [rows] = await pool.query(query);
-
-    return NextResponse.json(rows, { status: 200 });
+    const [results] = await pool.query(query);
+    
+    return NextResponse.json(results, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching invoice report:", error);
