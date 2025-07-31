@@ -16,35 +16,46 @@ export async function GET() {
   }
 }
 
-// POST new supplier
+// POST new supplier with auto-incremented Supplier_Id (e.g., SUP0001)
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const pool = await getDBConnection();
-
     const {
-      Supplier_Id,
       Supplier_Name,
       Country,
       Email,
       Phone,
       Address,
       Status,
-    } = body;
+    } = await request.json();
 
-    if (!Supplier_Id || !Supplier_Name) {
+    if (!Supplier_Name) {
       return NextResponse.json(
-        { error: "Supplier_Id and Supplier_Name are required" },
+        { error: "Supplier_Name is required" },
         { status: 400 }
       );
     }
 
+    const pool = await getDBConnection();
+
+    // Generate new Supplier_Id
+    const [latest] = await pool.query(
+      "SELECT Supplier_Id FROM supplier_data ORDER BY Supplier_Id DESC LIMIT 1"
+    );
+
+    let newId = "SUP0001";
+    if (latest.length > 0) {
+      const lastId = latest[0].Supplier_Id; // e.g., "SUP0010"
+      const num = parseInt(lastId.replace("SUP", ""), 10);
+      newId = "SUP" + String(num + 1).padStart(4, "0");
+    }
+
+    // Insert supplier
     await pool.execute(
       `INSERT INTO supplier_data 
-                (Supplier_Id, Supplier_Name, Country, Item_Code, Item_Name)
-             VALUES (?, ?, ?, ?, ?)`,
+       (Supplier_Id, Supplier_Name, Country, Email, Phone, Address, Status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        Supplier_Id,
+        newId,
         Supplier_Name,
         Country || null,
         Email || null,
@@ -54,7 +65,18 @@ export async function POST(request) {
       ]
     );
 
-    return NextResponse.json({ ...body }, { status: 201 });
+    return NextResponse.json(
+      {
+        Supplier_Id: newId,
+        Supplier_Name,
+        Country,
+        Email,
+        Phone,
+        Address,
+        Status,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -93,15 +115,15 @@ export async function PUT(request) {
 
     await pool.execute(
       `UPDATE supplier_data 
-             SET Supplier_Name = ?, Country = ?, Email = ?, Phone = ? Address = ? ,Status = ?
-             WHERE Supplier_Id = ?`,
+       SET Supplier_Name = ?, Country = ?, Email = ?, Phone = ?, Address = ?, Status = ?
+       WHERE Supplier_Id = ?`,
       [
         body.Supplier_Name || supplier.Supplier_Name,
         body.Country || supplier.Country,
         body.Email || supplier.Email,
         body.Phone || supplier.Phone,
         body.Address || supplier.Address,
-        body.Status|| supplier.Status,
+        body.Status || supplier.Status,
         body.Supplier_Id,
       ]
     );
@@ -141,7 +163,7 @@ export async function DELETE(request) {
       [Supplier_Id]
     );
 
-    if (existing.length === 0) {
+    if (!Array.isArray(existing) || existing.length === 0) {
       return NextResponse.json(
         { error: "Supplier not found" },
         { status: 404 }
