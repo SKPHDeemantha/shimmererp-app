@@ -21,7 +21,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      Quatation_Id,
       Customer_Id,
       Customer_Name,
       Date_Created,
@@ -32,29 +31,44 @@ export async function POST(request: Request) {
       Grand_Total,
     } = body;
 
+    // Validate required fields (except Quatation_Id, which will be generated)
     if (
-      !Quatation_Id ||
       !Customer_Id ||
       !Customer_Name ||
       !Date_Created ||
       !Valid_Until ||
       !Status ||
-      !Total_Amount ||
-      !Discount ||
-      !Grand_Total
+      Total_Amount === undefined ||
+      Discount === undefined ||
+      Grand_Total === undefined
     ) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "All fields except Quatation_Id are required" },
         { status: 400 }
       );
     }
 
     const pool = await getDBConnection();
+
+    // Generate new Quatation_Id
+    const [rows] = await pool.query(
+      "SELECT Quatation_Id FROM quatation_data ORDER BY Quatation_Id DESC LIMIT 1"
+    );
+
+    let newId = "Q0001";
+    if ((rows as any[]).length > 0) {
+      const lastId = (rows as any[])[0].Quatation_Id; // e.g., "Q0012"
+      const numeric = parseInt(lastId.replace("Q", ""), 10);
+      newId = "Q" + String(numeric + 1).padStart(4, "0");
+    }
+
+    // Insert new quotation
     await pool.execute(
-      `INSERT INTO quatation_data (Quatation_Id, Customer_Id, Customer_Name, Date_Created, Valid_Until, Status, Total_Amount, Discount, Grand_Total)
+      `INSERT INTO quatation_data 
+       (Quatation_Id, Customer_Id, Customer_Name, Date_Created, Valid_Until, Status, Total_Amount, Discount, Grand_Total)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        Quatation_Id,
+        newId,
         Customer_Id,
         Customer_Name,
         Date_Created,
@@ -66,7 +80,7 @@ export async function POST(request: Request) {
       ]
     );
 
-    return NextResponse.json({ id: Quatation_Id, ...body }, { status: 201 });
+    return NextResponse.json({ Quatation_Id: newId, ...body }, { status: 201 });
   } catch (error) {
     console.error("Error creating quotation:", error);
     return NextResponse.json(
@@ -96,7 +110,10 @@ export async function PUT(request: Request) {
 
     const quotation = (existing as any[])[0];
     if (!quotation) {
-      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Quotation not found" },
+        { status: 404 }
+      );
     }
 
     await pool.execute(
@@ -151,10 +168,15 @@ export async function DELETE(request: Request) {
     );
 
     if ((existing as any[]).length === 0) {
-      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Quotation not found" },
+        { status: 404 }
+      );
     }
 
-    await pool.execute("DELETE FROM quatation_data WHERE Quatation_Id = ?", [id]);
+    await pool.execute("DELETE FROM quatation_data WHERE Quatation_Id = ?", [
+      id,
+    ]);
 
     return NextResponse.json(
       { message: "Quotation deleted successfully" },
