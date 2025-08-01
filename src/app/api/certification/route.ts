@@ -17,12 +17,13 @@ export async function GET() {
 }
 
 // POST a new certificate
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { Reg_Id, Certificate_Name, Item_Code, Item_Name, Expiry_Date } = body;
+    const { Certificate_Name, Item_Code, Item_Name, Expiry_Date } = body;
 
-    if (!Reg_Id || !Certificate_Name || !Item_Code || !Item_Name || !Expiry_Date) {
+    if (!Certificate_Name || !Item_Code || !Item_Name || !Expiry_Date) {
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
@@ -31,21 +32,39 @@ export async function POST(request: Request) {
 
     const pool = await getDBConnection();
 
+    // Step 1: Generate new Reg_Id like R0001, R0002, ...
+    const [rows] = await pool.query(
+      `SELECT Reg_Id FROM certification_report ORDER BY Reg_Id DESC LIMIT 1`
+    )as [{ Reg_Id: string }[], any];
+
+    let newRegId = "R0001";
+    if (rows.length > 0) {
+      const lastId = rows[0].Reg_Id;
+      const numericPart = parseInt(lastId.replace("R", ""), 10);
+      const nextNumber = numericPart + 1;
+      newRegId = `R${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // Step 2: Insert into certification_report
     await pool.execute(
       `INSERT INTO certification_report (Reg_Id, Certificate_Name, Item_Code, Item_Name, Expiry_Date)
        VALUES (?, ?, ?, ?, ?)`,
-      [Reg_Id, Certificate_Name, Item_Code, Item_Name, Expiry_Date]
+      [newRegId, Certificate_Name, Item_Code, Item_Name, Expiry_Date]
     );
 
-    return NextResponse.json({ id: Reg_Id, ...body }, { status: 201 });
+    return NextResponse.json(
+      { message: "Certificate created", Reg_Id: newRegId, ...body },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error(error);
+    console.error("Error creating certificate:", error);
     return NextResponse.json(
       { error: "Failed to create certificate" },
       { status: 500 }
     );
   }
 }
+
 
 // PUT update certificate
 export async function PUT(request: Request) {
