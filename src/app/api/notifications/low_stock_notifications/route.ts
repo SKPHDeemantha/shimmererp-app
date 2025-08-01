@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     const pool = await getDBConnection();
 
     const {
-      Notification_Id,
       Item_Code,
       Item_Name,
       Current_Qty,
@@ -34,7 +33,6 @@ export async function POST(request: Request) {
     } = body;
 
     if (
-      !Notification_Id ||
       !Item_Code ||
       !Item_Name ||
       !Current_Qty ||
@@ -49,12 +47,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Step 1: Get the latest Notification_Id
+    const [rows] = await pool.query(
+      `SELECT Notification_Id FROM low_stock_notification_data ORDER BY Notification_Id DESC LIMIT 1`
+    )as [{ Notification_Id: string }[], any];
+
+    let newNotificationId = "N0001"; // Default first ID
+    if (rows.length > 0) {
+      const lastId = rows[0].Notification_Id;
+      const numericPart = parseInt(lastId.replace("N", ""), 10);
+      const nextNumber = numericPart + 1;
+      newNotificationId = `N${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // Step 2: Insert into the table
     const [result] = await pool.execute(
       `INSERT INTO low_stock_notification_data
-      (Notification_Id, Item_Code, Item_Name, Current_Qty, Reorder_level, Notification_Status, Notification_Date, Email)
+        (Notification_Id, Item_Code, Item_Name, Current_Qty, Reorder_level, Notification_Status, Notification_Date, Email)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        Notification_Id,
+        newNotificationId,
         Item_Code,
         Item_Name,
         Current_Qty,
@@ -65,7 +77,14 @@ export async function POST(request: Request) {
       ]
     );
 
-    return NextResponse.json({ id: Notification_Id, ...body }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: "Low stock notification created",
+        Notification_Id: newNotificationId,
+        ...body,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("POST error:", error);
     return NextResponse.json(
@@ -74,6 +93,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 // PUT update low stock notification
 export async function PUT(request: Request) {
