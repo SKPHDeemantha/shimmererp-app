@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     const pool = await getDBConnection();
 
     const {
-      Notification_ID,
       Item_Code,
       Item_Name,
       Quantity,
@@ -31,21 +30,38 @@ export async function POST(request: Request) {
       Notification_Status,
     } = body;
 
-    if (!Notification_ID || !Item_Code || !Item_Name || !Quantity || !Expiry_Date || !Notification_Status) {
+    if (!Item_Code || !Item_Name || !Quantity || !Expiry_Date || !Notification_Status) {
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
       );
     }
 
+    // 1. Get the latest Notification_ID
+    const [rows] = await pool.query(
+      `SELECT Notification_ID FROM expiry_notification_data ORDER BY Notification_ID DESC LIMIT 1`
+    )as [{ Notification_ID: string }[], any];
+
+    let newNotificationId = "N0001"; // Default first ID
+    if (rows.length > 0) {
+      const lastId = rows[0].Notification_ID;
+      const numericPart = parseInt(lastId.replace("N", ""), 10);
+      const nextNumber = numericPart + 1;
+      newNotificationId = `N${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // 2. Insert into expiry_notification_data
     const [result] = await pool.execute(
       `INSERT INTO expiry_notification_data 
-      (Notification_ID, Item_Code, Item_Name, Quantity, Expiry_Date, Notification_Status)
+        (Notification_ID, Item_Code, Item_Name, Quantity, Expiry_Date, Notification_Status)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [Notification_ID, Item_Code, Item_Name, Quantity, Expiry_Date, Notification_Status]
+      [newNotificationId, Item_Code, Item_Name, Quantity, Expiry_Date, Notification_Status]
     );
 
-    return NextResponse.json({ id: Notification_ID, ...body }, { status: 201 });
+    return NextResponse.json(
+      { message: "Expiry notification created", Notification_ID: newNotificationId, ...body },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("POST error:", error);
     return NextResponse.json(
