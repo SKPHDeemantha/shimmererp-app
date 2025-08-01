@@ -15,3 +15,6 @@ export async function GET() {
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }
+
+
+//deleivery table should be created auto
