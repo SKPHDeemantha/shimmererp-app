@@ -20,34 +20,56 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const pool = await getDBConnection();
+    const { Name, Email, Phone, Address } = body;
 
-    const { Customer_ID, Name, Email, Phone, Address } = body;
-    if (!body.Name || !body.Customer_ID) {
+    if (!Name) {
       return NextResponse.json(
-        { error: "Name and Customer_ID are required" },
+        { error: "Name is required" },
         { status: 400 }
       );
     }
 
-    const [result] = await pool.execute(
-      `INSERT INTO customer_data (Customer_ID,Name, Email, Phone, Address)
-             VALUES (? ,?, ?, ?, ?)`,
-      [body.Customer_ID,body.Name, body.Email|| null, body.Phone || null, body.Address || null]
+    const pool = await getDBConnection();
+
+    // Step 1: Generate next Customer_ID (e.g., CU0001, CU0002)
+    const [rows] = await pool.query(
+      `SELECT Customer_ID FROM customer_data ORDER BY Customer_ID DESC LIMIT 1`
+    )as [{ Customer_ID: string }[], any];
+
+    let newCustomerId = "CU0001";
+    if (rows.length > 0) {
+      const lastId = rows[0].Customer_ID;
+      const numericPart = parseInt(lastId.replace("CU", ""), 10);
+      const nextNumber = numericPart + 1;
+      newCustomerId = `CU${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // Step 2: Insert into customer_data
+    await pool.execute(
+      `INSERT INTO customer_data (Customer_ID, Name, Email, Phone, Address)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        newCustomerId,
+        Name,
+        Email || null,
+        Phone || null,
+        Address || null
+      ]
     );
 
     return NextResponse.json(
-      { Customer_ID: (result as any).insertId, ...body },
+      { message: "Customer created", Customer_ID: newCustomerId, ...body },
       { status: 201 }
     );
   } catch (error) {
-    console.error(error);
+    console.error("Error creating customer:", error);
     return NextResponse.json(
       { error: "Failed to create customer" },
       { status: 500 }
     );
   }
 }
+
 
 // PUT update customer
 export async function PUT(request: Request) {
