@@ -21,7 +21,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      GRN_ID,
       Po_Id,
       Item_Code,
       Item_Name,
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
     } = body;
 
     if (
-      !GRN_ID || !Po_Id || !Item_Code || !Item_Name || !Quantity ||
+      !Po_Id || !Item_Code || !Item_Name || !Quantity ||
       !Unit_Price || !Total_Amount || !MF_Date || !Status || !Ex_Date
     ) {
       return NextResponse.json(
@@ -45,18 +44,41 @@ export async function POST(request: Request) {
 
     const pool = await getDBConnection();
 
+    // Step 1: Generate a new GRN_ID like G0001, G0002, ...
+    const [rows] = await pool.query(
+      `SELECT GRN_ID FROM good_receipts_data ORDER BY GRN_ID DESC LIMIT 1`
+    )as [{ GRN_ID: string }[], any];
+
+    let newGrnId = "GR0001";
+    if (rows.length > 0) {
+      const lastId = rows[0].GRN_ID;
+      const numericPart = parseInt(lastId.replace("GR", ""), 10);
+      const nextNumber = numericPart + 1;
+      newGrnId = `GR${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // Step 2: Insert the goods receipt
     await pool.execute(
       `INSERT INTO good_receipts_data 
-       (GRN_ID, Po_Id, Item_Code, Item_Name, Quantity, Unit_Price, Total_Amount, MF_Date, Status, Ex_Date)
+        (GRN_ID, Po_Id, Item_Code, Item_Name, Quantity, Unit_Price, Total_Amount, MF_Date, Status, Ex_Date)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        GRN_ID, Po_Id, Item_Code, Item_Name,
-        Quantity, Unit_Price, Total_Amount,
-        MF_Date, Status, Ex_Date
+        newGrnId,
+        Po_Id,
+        Item_Code,
+        Item_Name,
+        Quantity,
+        Unit_Price,
+        Total_Amount,
+        MF_Date,
+        Status,
+        Ex_Date
       ]
     );
 
-    return NextResponse.json({ id: GRN_ID, ...body }, { status: 201 });
+    return NextResponse.json(
+      { message: "Goods receipt created", GRN_ID: newGrnId, ...body },
+    );
   } catch (error) {
     console.error("Error creating goods receipt:", error);
     return NextResponse.json(
@@ -159,4 +181,4 @@ export async function POST(request: Request) {
 //       { status: 500 }
 //     );
 //   }
-// }
+ 
