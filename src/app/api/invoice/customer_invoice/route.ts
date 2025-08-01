@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     const pool = await getDBConnection();
 
     const {
-      In_No,
       Customer_ID,
       Customer_Name,
       Created_Date,
@@ -42,11 +41,11 @@ export async function POST(request: Request) {
       MF_Date,
       Ex_Date,
       Batch_No,
-      Type
+      Type,
     } = body;
 
     if (
-      !In_No || !Customer_ID || !Customer_Name || !Created_Date || !Item_Code || !Item_Name ||
+      !Customer_ID || !Customer_Name || !Created_Date || !Item_Code || !Item_Name ||
       !Pack_Size || !Unit_Price || !Total_Amount || !User_ID || !User_Name ||
       !Customer_Address || !User_Address || !User_Phone || !Fax || !SR_No ||
       !MF_Date || !Ex_Date || !Batch_No || !Type
@@ -57,18 +56,38 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1. Generate new In_No
+    const [rows] = await pool.query(
+      `SELECT In_No FROM customer_invoice_data ORDER BY In_No DESC LIMIT 1`
+    )as [{ In_No: string }[], any];
+
+    let newInvoiceNo = "IN0001";
+    if (rows.length > 0) {
+      const lastId = rows[0].In_No;
+      const numericPart = parseInt(lastId.replace("IN", ""), 10);
+      const nextNumber = numericPart + 1;
+      newInvoiceNo = `IN${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // 2. Insert into customer_invoice_data
     const [result] = await pool.execute(
       `INSERT INTO customer_invoice_data 
-      (In_No, Customer_ID, Customer_Name, Created_Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount, 
-       User_ID, User_Name, Customer_Address, User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type)
+        (In_No, Customer_ID, Customer_Name, Created_Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount, 
+         User_ID, User_Name, Customer_Address, User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [In_No, Customer_ID, Customer_Name, Created_Date, Item_Code, Item_Name, Pack_Size, Unit_Price, Total_Amount,
-       User_ID, User_Name, Customer_Address, User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type]
+      [
+        newInvoiceNo, Customer_ID, Customer_Name, Created_Date, Item_Code, Item_Name,
+        Pack_Size, Unit_Price, Total_Amount, User_ID, User_Name, Customer_Address,
+        User_Address, User_Phone, Fax, SR_No, MF_Date, Ex_Date, Batch_No, Type
+      ]
     );
 
-    return NextResponse.json({ id: In_No, ...body }, { status: 201 });
+    return NextResponse.json(
+      { message: "Customer invoice created", In_No: newInvoiceNo, ...body },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error(error);
+    console.error("POST error:", error);
     return NextResponse.json(
       { error: "Failed to create customer invoice" },
       { status: 500 }
