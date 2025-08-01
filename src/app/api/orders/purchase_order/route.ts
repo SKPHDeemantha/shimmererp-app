@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     const pool = await getDBConnection();
 
     const {
-      Po_Id,
       Created_Date,
       Location,
       Supplier_Id,
@@ -33,25 +32,39 @@ export async function POST(request: Request) {
       Price,
       Quantity,
       DisValue,
-      TotValue,
     } = body;
 
-    if (!Po_Id || !Supplier_Id || !Item_Id || !Price || !Quantity) {
+    if (!Supplier_Id || !Item_Id || !Price || !Quantity) {
       return NextResponse.json(
         {
-          error:
-            "Po_Id, Supplier_Id, Item_Id, Price, and Quantity are required",
+          error: "Supplier_Id, Item_Id, Price, and Quantity are required",
         },
         { status: 400 }
       );
     }
 
+    // 1. Get latest Po_Id
+    const [rows] = await pool.query(
+      `SELECT Po_Id FROM purchase_order ORDER BY Po_Id DESC LIMIT 1`
+    ) as [{ Po_Id: string }[], any];
+
+    let newPoId = "P0001"; // Default first ID
+
+    if (rows.length > 0) {
+      const lastPoId = rows[0].Po_Id;
+      const numericPart = parseInt(lastPoId.replace("P", ""), 10);
+      const nextNumber = numericPart + 1;
+      newPoId = `P${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    const TotValue = Price * Quantity - (DisValue || 0.0);
+
     const [result] = await pool.execute(
       `INSERT INTO purchase_order 
-                (Po_Id, Created_Date, Location, Supplier_Id, Supplier_Name, Item_Id, Item_Name, Price, Quantity, DisValue, TotValue)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (Po_Id, Created_Date, Location, Supplier_Id, Supplier_Name, Item_Id, Item_Name, Price, Quantity, DisValue, TotValue)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        Po_Id,
+        newPoId,
         Created_Date || null,
         Location || null,
         Supplier_Id,
@@ -61,19 +74,23 @@ export async function POST(request: Request) {
         Price,
         Quantity,
         DisValue || 0.0,
-        TotValue || Price * Quantity - (DisValue || 0.0),
+        TotValue,
       ]
     );
 
-    return NextResponse.json({ ...body }, { status: 201 });
+    return NextResponse.json(
+      { ...body, Po_Id: newPoId, TotValue },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error(error);
+    console.error("Failed to insert purchase order:", error);
     return NextResponse.json(
       { error: "Failed to create purchase order" },
       { status: 500 }
     );
   }
 }
+
 
 // PUT update purchase order
 export async function PUT(request: Request) {
