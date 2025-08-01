@@ -16,35 +16,51 @@ export async function GET() {
   }
 }
 
-// POST a new notification
+// POST a new notificatioN
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const pool = await getDBConnection();
 
     const {
-      Notification_ID,
       Reg_Id,
       Certification_Name,
       Expiry_Date,
       Notification_Status,
     } = body;
 
-    if (!Notification_ID || !Reg_Id || !Certification_Name || !Expiry_Date || !Notification_Status) {
+    if (!Reg_Id || !Certification_Name || !Expiry_Date || !Notification_Status) {
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
       );
     }
 
+    // 1. Get the latest Notification_ID
+    const [rows] = await pool.query(
+      `SELECT Notification_ID FROM certification_expiry_notification ORDER BY Notification_ID DESC LIMIT 1`
+    ) as [{ Notification_ID: string }[], any];
+
+    let newNotificationId = "N0001"; // default starting ID
+    if (rows.length > 0) {
+      const lastId = rows[0].Notification_ID;
+      const numericPart = parseInt(lastId.replace("N", ""), 10);
+      const nextNumber = numericPart + 1;
+      newNotificationId = `N${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // 2. Insert the new notification
     const [result] = await pool.execute(
       `INSERT INTO certification_expiry_notification 
         (Notification_ID, Reg_Id, Certification_Name, Expiry_Date, Notification_Status)
        VALUES (?, ?, ?, ?, ?)`,
-      [Notification_ID, Reg_Id, Certification_Name, Expiry_Date, Notification_Status]
+      [newNotificationId, Reg_Id, Certification_Name, Expiry_Date, Notification_Status]
     );
 
-    return NextResponse.json({ id: Notification_ID, ...body }, { status: 201 });
+    return NextResponse.json(
+      { message: "Notification created", Notification_ID: newNotificationId, ...body },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("POST error:", error);
     return NextResponse.json(
