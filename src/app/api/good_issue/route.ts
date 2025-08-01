@@ -20,9 +20,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { Good_Issue_Id, Item_Code, Item_Name, Quantity, Date } = body;
+    const { Item_Code, Item_Name, Quantity, Date } = body;
 
-    if (!Good_Issue_Id || !Item_Code || !Item_Name || !Quantity || !Date) {
+    if (!Item_Code || !Item_Name || !Quantity || !Date) {
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
@@ -30,13 +30,32 @@ export async function POST(request: Request) {
     }
 
     const pool = await getDBConnection();
+
+    // Step 1: Generate a new Good_Issue_Id like GI0001, GI0002, ...
+    const [rows] = await pool.query(
+      `SELECT Good_Issue_Id FROM good_issues_data ORDER BY Good_Issue_Id DESC LIMIT 1`
+    )as [{ Good_Issue_Id: string }[], any];
+
+    let newIssueId = "GI0001";
+    if (rows.length > 0) {
+      const lastId = rows[0].Good_Issue_Id;
+      const numericPart = parseInt(lastId.replace("GI", ""), 10);
+      const nextNumber = numericPart + 1;
+      newIssueId = `GI${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // Step 2: Insert into good_issues_data
     await pool.execute(
-      `INSERT INTO good_issues_data (Good_Issue_Id, Item_Code, Item_Name, Quantity, Date)
+      `INSERT INTO good_issues_data 
+        (Good_Issue_Id, Item_Code, Item_Name, Quantity, Date)
        VALUES (?, ?, ?, ?, ?)`,
-      [Good_Issue_Id, Item_Code, Item_Name, Quantity, Date]
+      [newIssueId, Item_Code, Item_Name, Quantity, Date]
     );
 
-    return NextResponse.json({ id: Good_Issue_Id, ...body }, { status: 201 });
+    return NextResponse.json(
+      { message: "Good issue created", Good_Issue_Id: newIssueId, ...body },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating good issue:", error);
     return NextResponse.json(
@@ -45,6 +64,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 
 // PUT update good issue
 // export async function PUT(request: Request) {
