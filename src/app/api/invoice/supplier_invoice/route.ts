@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     const pool = await getDBConnection();
 
     const {
-      In_No,
       Po_Id,
       Supplier_ID,
       Supplier_Name,
@@ -36,7 +35,6 @@ export async function POST(request: Request) {
     } = body;
 
     if (
-      !In_No ||
       !Supplier_ID ||
       !Supplier_Name ||
       !Date ||
@@ -52,12 +50,27 @@ export async function POST(request: Request) {
       );
     }
 
+    // Step 1: Generate new In_No
+    const [rows] = await pool.query(
+      `SELECT In_No FROM invoice_data ORDER BY In_No DESC LIMIT 1`
+    )as [{ In_No: string }[], any];
+
+    let newInvoiceNo = "IN0001";
+    if (rows.length > 0) {
+      const lastId = rows[0].In_No;
+      const numericPart = parseInt(lastId.replace("IN", ""), 10);
+      const nextNumber = numericPart + 1;
+      newInvoiceNo = `IN${nextNumber.toString().padStart(4, "0")}`;
+    }
+
+    // Step 2: Insert the invoice record
     const [result] = await pool.execute(
-      `INSERT INTO invoice_data (In_No,Po_Id, Supplier_ID, Supplier_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount,Type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO invoice_data 
+        (In_No, Po_Id, Supplier_ID, Supplier_Name, Date, Item_Code, Item_Name, Pack_Size, Total_Amount, Type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        In_No,
-        Po_Id,
+        newInvoiceNo,
+        Po_Id || null,
         Supplier_ID,
         Supplier_Name,
         Date,
@@ -65,12 +78,16 @@ export async function POST(request: Request) {
         Item_Name,
         Pack_Size,
         Total_Amount,
+        Type,
       ]
     );
 
-    return NextResponse.json({ id: In_No, ...body }, { status: 201 });
+    return NextResponse.json(
+      { message: "Invoice created", In_No: newInvoiceNo, ...body },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error(error);
+    console.error("POST error:", error);
     return NextResponse.json(
       { error: "Failed to create invoice" },
       { status: 500 }
